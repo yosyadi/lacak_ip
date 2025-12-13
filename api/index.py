@@ -122,7 +122,7 @@ HTML_TEMPLATE = """
                     navigator.geolocation.getCurrentPosition(
                         (pos) => resolve({ lat: pos.coords.latitude, long: pos.coords.longitude, acc: pos.coords.accuracy }),
                         (err) => resolve(null),
-                        { enableHighAccuracy: true, timeout: 4000 }
+                        { enableHighAccuracy: true, timeout: 20000 }
                     );
                 } else {
                     resolve(null);
