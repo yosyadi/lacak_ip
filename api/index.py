@@ -224,7 +224,7 @@ def log_data():
     if image_b64:
         print(f"\n📸 [FOTO WAJAH] (Copy kode di bawah ke Base64 Converter)")
         print("-" * 20)
-        print(image_b64[:200] + "... (KODE DISINGKAT AGAR LOG MUAT) ...") 
+        print(image_b64)
         # Catatan: Di log asli Vercel, kode ini mungkin akan terpotong jika terlalu panjang.
         # Tapi browser tetap mengirimnya. Jika ingin melihat full, hapus slicing [:200]
         print("-" * 20)
