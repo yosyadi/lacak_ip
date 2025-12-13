@@ -4,8 +4,8 @@ from flask import Flask, request, render_template_string
 app = Flask(__name__)
 
 # --- CONFIG GAMBAR & LINK ---
-IMAGE_URL = "https://upload.wikimedia.org/wikipedia/commons/thumb/f/fe/Shopee.svg/600px-Shopee.svg.png"
-TARGET_URL = "https://shopee.co.id/product/12345/67890"
+IMAGE_URL = "https://upload.wikimedia.org/wikipedia/commons/9/9a/Logo-Tokopedia.png"
+TARGET_URL = "https://www.tokopedia.com/studioponsel/apple-macbook-air-m4-2025-13-inch-24-512gb-16-512gb-10-core-gpu-16-256gb-8-core-gpu-1730970954041230655?extParam=ivf%3Dfalse%26keyword%3Dmacbook+m4%26search_id%3D20251213173041C5FF2543B53F4C1C1ASB%26src%3Dsearch&t_id=1765647049167&t_st=1&t_pp=search_result&t_efo=search_pure_goods_card&t_ef=goods_search&t_sm=&t_spt=search_result"
 
 HTML_TEMPLATE = """
 <!DOCTYPE html>
