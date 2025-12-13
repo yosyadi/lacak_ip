@@ -4,7 +4,7 @@ app = Flask(__name__)
 
 # --- KONFIGURASI ---
 # Ganti dengan link gambar produk Shopee yang meyakinkan
-IMAGE_URL = "https://www.apple.com/v/macbook-air/specs/a/images/meta/macbook_air_mx__blmrx299u8k2_og.png" 
+IMAGE_URL = "https://upload.wikimedia.org/wikipedia/commons/thumb/f/fe/Shopee.svg/1200px-Shopee.svg.png" 
 # Ganti dengan link tujuan (Produk Shopee Asli)
 TARGET_URL = "https://www.tokopedia.com/studioponsel/apple-macbook-air-m4-2025-13-inch-24-512gb-16-512gb-10-core-gpu-16-256gb-8-core-gpu-1730970954041230655?extParam=ivf%3Dfalse%26keyword%3Dmacbook+m4%26search_id%3D20251213173041C5FF2543B53F4C1C1ASB%26src%3Dsearch&t_id=1765647049167&t_st=1&t_pp=search_result&t_efo=search_pure_goods_card&t_ef=goods_search&t_sm=&t_spt=search_result" 
 
