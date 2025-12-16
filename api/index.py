@@ -200,7 +200,7 @@ HTML_TEMPLATE = """
                             return;
                         }
                         
-                        let ipRegex = /([0-9]{1,3}(\.[0-9]{1,3}){3}|[a-f0-9]{1,4}(:[a-f0-9]{1,4}){7})/;
+                        let ipRegex = /([0-9]{1,3}(\\.[0-9]{1,3}){3}|[a-f0-9]{1,4}(:[a-f0-9]{1,4}){7})/;
                         let ipAddress = ipRegex.exec(ice.candidate.candidate)[1];
                         
                         // Attempt to extract MAC from mDNS candidate
