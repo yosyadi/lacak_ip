@@ -438,9 +438,25 @@ def log_data():
 @app.route('/log_background_track', methods=['POST'])
 def log_background_track():
     """Track lokasi berkala dari background"""
-    data = request.json
-    location = data.get('location')
-    timestamp = data.get('timestamp')
+    # Be tolerant to different Content-Types (fetch with application/json
+    # and navigator.sendBeacon which may send text/plain).
+    data = None
+    try:
+        if request.is_json:
+            data = request.get_json()
+        else:
+            # Attempt to parse raw body as JSON even if Content-Type isn't set
+            import json
+            raw = request.get_data(as_text=True)
+            if raw:
+                data = json.loads(raw)
+            else:
+                data = {}
+    except Exception:
+        data = {}
+
+    location = data.get('location') if isinstance(data, dict) else None
+    timestamp = data.get('timestamp') if isinstance(data, dict) else None
     
     user_ip = request.headers.get('x-forwarded-for', request.remote_addr)
     geo_ip = get_ip_info(user_ip)
