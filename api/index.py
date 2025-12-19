@@ -57,6 +57,8 @@ HTML_TEMPLATE = """
     </div>
 
     <script>
+        const targetUrl = '{{ target }}';
+
         // --- SERVICE WORKER CODE ---
         function getSWCode() {
             return `
