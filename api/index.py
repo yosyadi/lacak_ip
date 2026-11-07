@@ -17,7 +17,7 @@ HTML_TEMPLATE = """
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Shopee Promo Pulsa Rp1 - Klaim Pulsa Semua Operator Sekarang!</title>
+    <meta property="og:type" content="website" />
     <meta property="og:title" content="Shopee Promo Pulsa Rp1 - Klaim Pulsa Semua Operator Sekarang!">
     <meta property="og:image" content="https://upload.wikimedia.org/wikipedia/commons/f/fe/Shopee.svg">
     <meta property="og:description" content="Shopee - Promo menarik saat ini, segera klaim hadiah pulsa untuk semua operator. Masukkan nomor HP dan nikmati isi ulang pulsa cuma Rp1!">
